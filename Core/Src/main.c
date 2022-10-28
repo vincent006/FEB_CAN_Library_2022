@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "FEB_CAN.h"
 
 /* USER CODE END Includes */
 
@@ -46,11 +47,6 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-CAN_TxHeaderTypeDef my_TxHeader;
-CAN_RxHeaderTypeDef my_RxHeader;
-uint8_t TxData[8];
-uint8_t RxData[8];
-uint32_t TxMailbox;
 
 /* USER CODE END PV */
 
@@ -66,11 +62,6 @@ static void MX_I2C1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
-{
-	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &my_RxHeader, RxData);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-}
 
 /* USER CODE END 0 */
 
@@ -90,13 +81,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  my_TxHeader.DLC = 1;
-  my_TxHeader.ExtId = 0;
-  my_TxHeader.IDE = CAN_ID_STD;
-  my_TxHeader.RTR = CAN_RTR_DATA;
-  my_TxHeader.TransmitGlobalTime = DISABLE;
-
-  int state = 0;
 
   /* USER CODE END Init */
 
@@ -113,10 +97,9 @@ int main(void)
   MX_CAN1_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  if (HAL_CAN_Start(&hcan1) != HAL_OK) {
-	  Error_Handler();
-  }
-  HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
+
+  FEB_CAN_init(&hcan1, SM_Rx_ID, 2);
+  int state = 0;
 
   /* USER CODE END 2 */
 
@@ -212,7 +195,7 @@ static void MX_CAN1_Init(void)
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
   hcan1.Init.Prescaler = 16;
-  hcan1.Init.Mode = CAN_MODE_LOOPBACK;
+  hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = CAN_BS1_3TQ;
   hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
@@ -227,40 +210,7 @@ static void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
-  	CAN_FilterTypeDef my_can_filter_config;
 
-	my_can_filter_config.FilterActivation = CAN_FILTER_ENABLE;
-	my_can_filter_config.FilterBank = 0;
-	my_can_filter_config.FilterFIFOAssignment = 0;
-	my_can_filter_config.FilterIdHigh = 0b1 << 5; //Std ID is 11 bits, FilterIDHigh is the higher 16 bits
-	my_can_filter_config.FilterIdLow = 0;
-	my_can_filter_config.FilterMaskIdHigh = 0x7FF << 5; //check all the bits, the incoming id must be 0b101
-	my_can_filter_config.FilterMaskIdLow = 0;
-	my_can_filter_config.FilterMode = CAN_FILTERMODE_IDMASK;
-	my_can_filter_config.FilterScale = CAN_FILTERSCALE_32BIT;
-	my_can_filter_config.SlaveStartFilterBank = 14;
-
-	if(HAL_CAN_ConfigFilter(&hcan1, &my_can_filter_config))
-	{
-	  Error_Handler();
-	}
-
-	CAN_FilterTypeDef my_can_filter_config_2;
-
-	my_can_filter_config_2.FilterActivation = CAN_FILTER_ENABLE;
-	my_can_filter_config_2.FilterBank = 1;
-	my_can_filter_config_2.FilterFIFOAssignment = 0;
-	my_can_filter_config_2.FilterIdHigh = 0b10 << 5; //Std ID is 11 bits, FilterIDHigh is the higher 16 bits
-	my_can_filter_config_2.FilterIdLow = 0;
-	my_can_filter_config_2.FilterMaskIdHigh = 0x7FF << 5; //check all the bits, the incoming id must be 0b101
-	my_can_filter_config_2.FilterMaskIdLow = 0;
-	my_can_filter_config_2.FilterMode = CAN_FILTERMODE_IDMASK;
-	my_can_filter_config_2.FilterScale = CAN_FILTERSCALE_32BIT;
-	my_can_filter_config_2.SlaveStartFilterBank = 14;
-	if(HAL_CAN_ConfigFilter(&hcan1, &my_can_filter_config_2))
-	{
-	  Error_Handler();
-	}
   /* USER CODE END CAN1_Init 2 */
 
 }
