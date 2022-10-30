@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "string.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -99,8 +100,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   FEB_CAN_init(&hcan1, SM_Rx_ID, 2);
-  int state = 0;
 
+
+  //char str[128];
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -108,26 +110,18 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	 switch (my_RxHeader.StdId){
+		 case FEB_BMS_TEMP:
+				 // sprintf(str,"Received BMS Tmp\n");
+				 HAL_UART_Transmit(&huart2,(uint8_t*) "Received BMS Tmp\n",strlen("Received BMS Tmp\n"),100 );
+				 break;
+		 case FEB_BMS_VOLT:
+				 //sprintf(str,"Received BMS volt\n");
+				 HAL_UART_Transmit(&huart2,(uint8_t*) "Received BMS volt\n",strlen("Received BMS volt\n"),100 );
+				 break;
+	 }
     /* USER CODE BEGIN 3 */
-	if(state == 0) {
-		my_TxHeader.StdId = 0b1;
-		TxData[0] = 1;
-		state = 1;
-	} else if(state == 1) {
-		my_TxHeader.StdId = 0b10;
-		TxData[0] = 2;
-		state = 0;
-	}
 
-	if (HAL_CAN_AddTxMessage(&hcan1, &my_TxHeader, TxData, &TxMailbox) != HAL_OK)
-	{
-	  Error_Handler();
-	}
-
-	HAL_Delay(500);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-	HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }
