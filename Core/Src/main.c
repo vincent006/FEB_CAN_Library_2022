@@ -110,16 +110,19 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	 switch (my_RxHeader.StdId){
-		 case FEB_BMS_TEMP:
-				 // sprintf(str,"Received BMS Tmp\n");
-				 HAL_UART_Transmit(&huart2,(uint8_t*) "Received BMS Tmp\n",strlen("Received BMS Tmp\n"),100 );
-				 break;
-		 case FEB_BMS_VOLT:
-				 //sprintf(str,"Received BMS volt\n");
-				 HAL_UART_Transmit(&huart2,(uint8_t*) "Received BMS volt\n",strlen("Received BMS volt\n"),100 );
-				 break;
-	 }
+	  if(flag){
+		 switch (my_RxHeader.StdId){
+			 case FEB_BMS_TEMP:
+					 // sprintf(str,"Received BMS Tmp\n");
+					 HAL_UART_Transmit(&huart2,(uint8_t*) "Received BMS Tmp\n",strlen("Received BMS Tmp\n"),100 );
+					 break;
+			 case FEB_BMS_VOLT:
+					 //sprintf(str,"Received BMS volt\n");
+					 HAL_UART_Transmit(&huart2,(uint8_t*) "Received BMS volt\n",strlen("Received BMS volt\n"),100 );
+					 break;
+		 }
+		 flag = 0;
+	  }
     /* USER CODE BEGIN 3 */
 
   }

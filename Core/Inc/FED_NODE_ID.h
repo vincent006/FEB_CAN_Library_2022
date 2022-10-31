@@ -38,7 +38,7 @@
 typedef uint16_t FilterArrayType;
 /*** Buffer for BMS messages ***/
 struct {
-	float tempeurate;
+	float temperature;
 	float voltage;
 } BMS_MESSAGE_TYPE;
 const FilterArrayType BMS_Rx_ID[] = {FEB_SM_ID};
