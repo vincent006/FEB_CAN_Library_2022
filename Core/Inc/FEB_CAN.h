@@ -30,10 +30,9 @@ uint32_t TxMailbox;
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &my_RxHeader, RxData);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 }
 
-void FEB_CAN_Filter_Config(CAN_HandleTypeDef *hcan, FilterArrayType* filter_array, uint8_t filter_array_len) {
+void FEB_CAN_Filter_Config(CAN_HandleTypeDef *hcan, const FilterArrayType* filter_array, uint8_t filter_array_len) {
 
 	for (int i=0; i < filter_array_len; i++) {
 		CAN_FilterTypeDef my_can_filter_config;
@@ -56,7 +55,7 @@ void FEB_CAN_Filter_Config(CAN_HandleTypeDef *hcan, FilterArrayType* filter_arra
 	}
 }
 
-void FEB_CAN_init(CAN_HandleTypeDef *hcan, FilterArrayType* filter_array, uint8_t filter_array_len)
+void FEB_CAN_init(CAN_HandleTypeDef *hcan, const FilterArrayType* filter_array, uint8_t filter_array_len)
 {
 	my_TxHeader.DLC = 1;
 	my_TxHeader.StdId = 0x7FF;

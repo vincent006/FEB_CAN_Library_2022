@@ -98,7 +98,7 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
-  FEB_CAN_init(&hcan1, SM_Rx_ID, 2);
+  FEB_CAN_init(&hcan1, BMS_Rx_ID, 1);
   int state = 0;
 
   /* USER CODE END 2 */
@@ -111,12 +111,12 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	if(state == 0) {
-		my_TxHeader.StdId = 0b1;
-		TxData[0] = 1;
+		my_TxHeader.StdId = FEB_BMS_TEMP;
+		TxData[0] = 36.0;
 		state = 1;
 	} else if(state == 1) {
-		my_TxHeader.StdId = 0b10;
-		TxData[0] = 2;
+		my_TxHeader.StdId = FEB_BMS_VOLT;
+		TxData[0] = 120.0;
 		state = 0;
 	}
 
@@ -125,9 +125,7 @@ int main(void)
 	  Error_Handler();
 	}
 
-	HAL_Delay(500);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-	HAL_Delay(500);
+	HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
