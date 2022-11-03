@@ -26,10 +26,30 @@ CAN_RxHeaderTypeDef my_RxHeader;
 uint8_t TxData[8];
 uint8_t RxData[8];
 uint32_t TxMailbox;
+uint8_t flag = 0;
 
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
-{
-	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &my_RxHeader, RxData);
+
+void SM_Buffer(){
+	switch (my_RxHeader.StdId){
+		case FEB_BMS_TEMP:
+			BMS_MESSAGE_TYPE.temperature=(float) *RxData;
+			break;
+		case FEB_BMS_VOLT:
+			BMS_MESSAGE_TYPE.voltage=(float) *RxData;
+			break;
+		case FEB_APPS_GAS:
+			APPS_MESSAGE_TYPE.gas=(float) *RxData;
+			break;
+		case FEB_APPS_BRAKE:
+			APPS_MESSAGE_TYPE.brake=(float) *RxData;
+	}
+}
+
+void APPS_Buffer(){
+	switch(my_RxHeader.StdId){
+		case FEB_SM_CMD1:
+			SM_MESSAGE_TYPE.command_1=(float) *RxData;
+	}
 }
 
 void FEB_CAN_Filter_Config(CAN_HandleTypeDef *hcan, const FilterArrayType* filter_array, uint8_t filter_array_len) {

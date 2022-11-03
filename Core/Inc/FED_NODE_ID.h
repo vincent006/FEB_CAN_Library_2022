@@ -31,14 +31,14 @@
 #define FEB_APPS_ID 0x030
 
 #define FEB_APPS_GAS 0x031
-#define FEB_APPS_BREAKE 0x032
+#define FEB_APPS_BRAKE 0x032
 
 
 
 typedef uint16_t FilterArrayType;
 /*** Buffer for BMS messages ***/
-struct {
-	float tempeurate;
+struct{
+	float temperature;
 	float voltage;
 } BMS_MESSAGE_TYPE;
 const FilterArrayType BMS_Rx_ID[] = {FEB_SM_ID};

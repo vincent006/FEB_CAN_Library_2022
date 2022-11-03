@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "string.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -64,7 +65,13 @@ static void MX_I2C1_Init(void);
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &my_RxHeader, RxData);
 
+	//User defines which buffer to use
+	SM_Buffer();
+}
 /**
   * @brief  The application entry point.
   * @retval int
@@ -98,9 +105,10 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
-  FEB_CAN_init(&hcan1, BMS_Rx_ID, 1);
-  int state = 0;
+  FEB_CAN_init(&hcan1, SM_Rx_ID, 2);
 
+
+  //char str[128];
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -108,24 +116,20 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	 if(flag){
+		 switch (my_RxHeader.StdId){
+			 case FEB_BMS_TEMP:
+					 // sprintf(str,"Received BMS Tmp\n");
+					 HAL_UART_Transmit(&huart2,(uint8_t*) "Received BMS Tmp\n",strlen("Received BMS Tmp\n"),100 );
+					 break;
+			 case FEB_BMS_VOLT:
+					 //sprintf(str,"Received BMS volt\n");
+					 HAL_UART_Transmit(&huart2,(uint8_t*) "Received BMS volt\n",strlen("Received BMS volt\n"),100 );
+					 break;
+		 }
+		 flag = 0;
+	  }
     /* USER CODE BEGIN 3 */
-	if(state == 0) {
-		my_TxHeader.StdId = FEB_BMS_TEMP;
-		TxData[0] = 36.0;
-		state = 1;
-	} else if(state == 1) {
-		my_TxHeader.StdId = FEB_BMS_VOLT;
-		TxData[0] = 120.0;
-		state = 0;
-	}
-
-	if (HAL_CAN_AddTxMessage(&hcan1, &my_TxHeader, TxData, &TxMailbox) != HAL_OK)
-	{
-	  Error_Handler();
-	}
-
-	HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
