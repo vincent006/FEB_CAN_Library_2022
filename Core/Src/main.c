@@ -67,10 +67,7 @@ static void MX_I2C1_Init(void);
 /* USER CODE END 0 */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &my_RxHeader, RxData);
-
-	//User defines which buffer to use
-	SM_Buffer();
+	FEB_CAN_Receive(hcan);
 }
 /**
   * @brief  The application entry point.
@@ -105,7 +102,7 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
-  FEB_CAN_init(&hcan1, SM_Rx_ID, 2);
+  FEB_CAN_Init(&hcan1, FEB_SM_ID);
 
 
   //char str[128];

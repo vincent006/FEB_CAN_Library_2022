@@ -19,7 +19,7 @@
   */
 /* USER CODE END Header */
 
-#include "FED_NODE_ID.h"
+#include <FEB_NODE_ID.h>
 
 CAN_TxHeaderTypeDef my_TxHeader;
 CAN_RxHeaderTypeDef my_RxHeader;
@@ -29,30 +29,7 @@ uint32_t TxMailbox;
 uint8_t flag = 0;
 
 
-void SM_Buffer(){
-	switch (my_RxHeader.StdId){
-		case FEB_BMS_TEMP:
-			BMS_MESSAGE_TYPE.temperature=(float) *RxData;
-			break;
-		case FEB_BMS_VOLT:
-			BMS_MESSAGE_TYPE.voltage=(float) *RxData;
-			break;
-		case FEB_APPS_GAS:
-			APPS_MESSAGE_TYPE.gas=(float) *RxData;
-			break;
-		case FEB_APPS_BRAKE:
-			APPS_MESSAGE_TYPE.brake=(float) *RxData;
-	}
-}
-
-void APPS_Buffer(){
-	switch(my_RxHeader.StdId){
-		case FEB_SM_CMD1:
-			SM_MESSAGE_TYPE.command_1=(float) *RxData;
-	}
-}
-
-void FEB_CAN_Filter_Config(CAN_HandleTypeDef *hcan, const FilterArrayType* filter_array, uint8_t filter_array_len) {
+void FEB_CAN_Filter_Config(CAN_HandleTypeDef *hcan, const AddressIdType* filter_array, uint8_t filter_array_len) {
 
 	for (int i=0; i < filter_array_len; i++) {
 		CAN_FilterTypeDef my_can_filter_config;
@@ -75,8 +52,9 @@ void FEB_CAN_Filter_Config(CAN_HandleTypeDef *hcan, const FilterArrayType* filte
 	}
 }
 
-void FEB_CAN_init(CAN_HandleTypeDef *hcan, const FilterArrayType* filter_array, uint8_t filter_array_len)
+void FEB_CAN_Init(CAN_HandleTypeDef *hcan, uint16_t NODE_ID)
 {
+	// Setting up transmission header
 	my_TxHeader.DLC = 1;
 	my_TxHeader.StdId = 0x7FF;
 	my_TxHeader.ExtId = 0;
@@ -84,11 +62,58 @@ void FEB_CAN_init(CAN_HandleTypeDef *hcan, const FilterArrayType* filter_array, 
 	my_TxHeader.RTR = CAN_RTR_DATA;
 	my_TxHeader.TransmitGlobalTime = DISABLE;
 
-	FEB_CAN_Filter_Config(hcan, filter_array, filter_array_len);
+	// Assigning the array of sender and numbers of sender according to the node being initialized
+	const AddressIdType* filter_array;
+	const FilterAarrayLength filter_num;
+	switch(NODE_ID) {
+		case FEB_BMS_ID:
+			filter_array = BMS_Rx_ID;
+			filter_num = BMS_Rx_NUM;
+		case FEB_SM_ID:
+			filter_array = SM_Rx_ID;
+			filter_num = SM_Rx_NUM;
+		case FEB_APPS_ID:
+			filter_array = APPS_Rx_ID;
+			filter_num = APPS_Rx_NUM;
+	}
 
+	// Using the assigned array and num to configure filters
+	FEB_CAN_Filter_Config(hcan, filter_array, filter_num);
+
+	// Starting the CAN peripheral and enabling the receive interrupt
 	if (HAL_CAN_Start(hcan) != HAL_OK) {
 	  Error_Handler();
 	}
 	HAL_CAN_ActivateNotification(hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
 
+}
+
+void FEB_CAN_Receive(CAN_HandleTypeDef *hcan) {
+	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &my_RxHeader, RxData);
+
+	switch(my_RxHeader.StdId >> BITS_PER_MESSAGE_TYPE) {
+		case BMS_ID:
+			Store_BMS_Msg(my_RxHeader.StdId, RxData, my_RxHeader.DLC);
+			break;
+		case SM_ID:
+			Store_SM_Msg(my_RxHeader.StdId, RxData, my_RxHeader.DLC);
+			break;
+		case APPS_ID:
+			Store_APPS_Msg(my_RxHeader.StdId, RxData, my_RxHeader.DLC);
+	}
+
+}
+
+void FEB_CAN_Transmit(CAN_HandleTypeDef *hcan, AddressIdType Msg_ID, void *pData) {
+	// copy the data in to TxData buffer
+	memcpy(TxData, pData, sizeof(*pData));
+
+	// change the TxHeader based on the message type
+	my_TxHeader.StdId = Msg_ID;
+	my_TxHeader.DLC = sizeof(*pData);
+
+	if (HAL_CAN_AddTxMessage(hcan, &my_TxHeader, TxData, &TxMailbox) != HAL_OK)
+	{
+	  Error_Handler();
+	}
 }
