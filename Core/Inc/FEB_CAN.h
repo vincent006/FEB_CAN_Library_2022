@@ -45,13 +45,16 @@ void SM_Buffer(){
 	}
 }
 
+//sends 1.5 bytes
 void APPS_Buffer(){
 	switch(my_RxHeader.StdId){
 		case FEB_SM_CMD1:
 			SM_MESSAGE_TYPE.command_1=(float) *RxData;
 	}
 }
+void FEB_CAN_Transceive(){
 
+}
 void FEB_CAN_Filter_Config(CAN_HandleTypeDef *hcan, const FilterArrayType* filter_array, uint8_t filter_array_len) {
 
 	for (int i=0; i < filter_array_len; i++) {

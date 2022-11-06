@@ -1,7 +1,8 @@
 ../Core/Inc/FEB_CAN.h:32:6:SM_Buffer	4	static
-../Core/Inc/FEB_CAN.h:48:6:APPS_Buffer	4	static
-../Core/Inc/FEB_CAN.h:55:6:FEB_CAN_Filter_Config	72	static
-../Core/Inc/FEB_CAN.h:78:6:FEB_CAN_init	24	static
+../Core/Inc/FEB_CAN.h:49:6:APPS_Buffer	4	static
+../Core/Inc/FEB_CAN.h:55:6:FEB_CAN_Transceive	4	static
+../Core/Inc/FEB_CAN.h:58:6:FEB_CAN_Filter_Config	72	static
+../Core/Inc/FEB_CAN.h:81:6:FEB_CAN_init	24	static
 ../Core/Src/main.c:68:6:HAL_CAN_RxFifo0MsgPendingCallback	16	static
 ../Core/Src/main.c:79:5:main	8	static
 ../Core/Src/main.c:142:6:SystemClock_Config	88	static
