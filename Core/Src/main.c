@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "string.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -48,6 +47,7 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+int flag = 0;
 
 /* USER CODE END PV */
 
@@ -63,12 +63,13 @@ static void MX_I2C1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
+	FEB_CAN_Receive(hcan);
+	flag = 1;
+}
 
 /* USER CODE END 0 */
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
-{
-	FEB_CAN_Receive(hcan);
-}
+
 /**
   * @brief  The application entry point.
   * @retval int
@@ -102,8 +103,12 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
-  FEB_CAN_Init(&hcan1, FEB_SM_ID);
-
+  FEB_CAN_Init(&hcan1, SM_ID);
+  int state = 0;
+  BMS_TEMPERATURE_TYPE temp = 20.5;
+  float volt = 12.0;
+  uint16_t brake = 120;
+  uint16_t pedal_1 = 105;
 
   //char str[128];
   /* USER CODE END 2 */
@@ -113,20 +118,28 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	 if(flag){
-		 switch (my_RxHeader.StdId){
-			 case FEB_BMS_TEMP:
-					 // sprintf(str,"Received BMS Tmp\n");
-					 HAL_UART_Transmit(&huart2,(uint8_t*) "Received BMS Tmp\n",strlen("Received BMS Tmp\n"),100 );
-					 break;
-			 case FEB_BMS_VOLT:
-					 //sprintf(str,"Received BMS volt\n");
-					 HAL_UART_Transmit(&huart2,(uint8_t*) "Received BMS volt\n",strlen("Received BMS volt\n"),100 );
-					 break;
-		 }
-		 flag = 0;
-	  }
+
     /* USER CODE BEGIN 3 */
+	if(state == 0) {
+		temp += 0.5;
+		FEB_CAN_Transmit(&hcan1, BMS_TEMPERATURE, &temp, sizeof(temp));
+		state = 1;
+	} else if (state == 1) {
+		volt += 0.5;
+		FEB_CAN_Transmit(&hcan1, BMS_VOLTAGE, &volt, sizeof(volt));
+		state = 2;
+	} else if (state == 2) {
+		brake++;
+		FEB_CAN_Transmit(&hcan1, APPS_BRAKE_PEDAL, &brake, sizeof(brake));
+		state = 3;
+	} else if (state == 3) {
+		pedal_1++;
+		FEB_CAN_Transmit(&hcan1, APPS_ACCELERATOR1_PEDAL, &pedal_1, sizeof(pedal_1));
+		state = 0;
+	}
+	HAL_Delay(1000);
+	flag = 0;
+
   }
   /* USER CODE END 3 */
 }
@@ -194,7 +207,7 @@ static void MX_CAN1_Init(void)
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
   hcan1.Init.Prescaler = 16;
-  hcan1.Init.Mode = CAN_MODE_NORMAL;
+  hcan1.Init.Mode = CAN_MODE_LOOPBACK;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = CAN_BS1_3TQ;
   hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
