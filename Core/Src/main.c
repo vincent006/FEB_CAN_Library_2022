@@ -17,12 +17,21 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#define TIME_DELAY 100
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "FEB_CAN.h"
 
+struct {
+	float sensor1;
+	float sensor2;
+	float finalPos;
+	float brakePos;
+	float torque;
+	uint8_t flag;
+}PEDALS;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,8 +56,6 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-int flag = 0;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,7 +72,6 @@ static void MX_I2C1_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 	FEB_CAN_Receive(hcan);
-	flag = 1;
 }
 
 /* USER CODE END 0 */
@@ -104,11 +110,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   FEB_CAN_Init(&hcan1, SM_ID);
-  int state = 0;
-  BMS_TEMPERATURE_TYPE temp = 20.5;
-  float volt = 12.0;
-  uint16_t brake = 120;
-  uint16_t pedal_1 = 105;
+  FEB_APPS_Init();
+
 
   //char str[128];
   /* USER CODE END 2 */
@@ -118,31 +121,47 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  PEDALS.brakePos = FEB_APPS_getBrakePedal();
+	  PEDALS.finalPos = FEB_APPS_getAccPedal();
+	  float deviation = abs(PEDALS.sensor1-PEDALS.sensor2);
+	  if(PEDALS.flag){
+		  if(deviation>0.1){
+			  //Error message
+			  TransmitTorque();
+		  }
+	  }else{
+		  if(deviation > 0.1){
+			  flag = 1;
+		  }else{
+			 TransmitTorque();
+		  }
 
+	  }
+
+	  //TODO Potential brake sensor code required
+	  // Transmit pedal 1, pedal 2, and brake sensor
+	  FEB_CAN_Transmit(&hcan1, APPS_BRAKE_PEDAL,&PEDALS.brakePos,sizeof(PEDALS.brakePos));
+	  FEB_CAN_Transmit(&hcan1,APPS_ACCELERATOR1_PEDAL,&PEDALS.sensor1 ,sizeof(PEDALS.sensor1));
+	  FEB_CAN_Transmit(&hcan1,APPS_ACCELERATOR1_PEDAL,&PEDALS.sensor2 ,sizeof(PEDALS.sensor2));
+
+	  //Delay 100ms for next sensor reading
+	  HAL_Delay(TIME_DELAY);
     /* USER CODE BEGIN 3 */
-	if(state == 0) {
-		temp += 0.5;
-		FEB_CAN_Transmit(&hcan1, BMS_TEMPERATURE, &temp, sizeof(temp));
-		state = 1;
-	} else if (state == 1) {
-		volt += 0.5;
-		FEB_CAN_Transmit(&hcan1, BMS_VOLTAGE, &volt, sizeof(volt));
-		state = 2;
-	} else if (state == 2) {
-		brake++;
-		FEB_CAN_Transmit(&hcan1, APPS_BRAKE_PEDAL, &brake, sizeof(brake));
-		state = 3;
-	} else if (state == 3) {
-		pedal_1++;
-		FEB_CAN_Transmit(&hcan1, APPS_ACCELERATOR1_PEDAL, &pedal_1, sizeof(pedal_1));
-		state = 0;
-	}
-	HAL_Delay(1000);
-	flag = 0;
 
   }
   /* USER CODE END 3 */
 }
+
+//Transmits Torque based on battery Charge, Pedal Settings, and battery temp
+void TransmitTorque(){
+	//Uses Temperature, Battery charge, Pedal Settings
+	uint16_t torqueData=1;
+	FEB_CAN_Transmit(&hcan1, SM_TORQUE,&torqueData,sizeof(torqueData));
+
+
+}
+
+
 
 /**
   * @brief System Clock Configuration
@@ -207,7 +226,7 @@ static void MX_CAN1_Init(void)
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
   hcan1.Init.Prescaler = 16;
-  hcan1.Init.Mode = CAN_MODE_LOOPBACK;
+  hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = CAN_BS1_3TQ;
   hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
@@ -326,9 +345,53 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
 }
+//Sets all values to 0 initially
+void FEB_APPS_Init(){
+	PEDALS.brakePos=0;
+	PEDALS.sensor1=0;
+	PEDALS.sensor2=0;
+	PEDALS.flag = 0;
+
+	//NOTE May be more set up things I need to transmit
+}
 
 /* USER CODE BEGIN 4 */
+//TODO The ADC Channel has changed due to the new microbasic
+float FEB_APPS_getBrakePedal() {
+  float brake_pedal = FEB_ADC_sampleChannel(&hadc1, ADC_CHANNEL_13);
+//  char str[128];
+//  sprintf(str, "%f\t", brake_pedal);
+//  FEB_log("", "", str);
+  float brake_normalized = (brake_pedal - BRAKE_PEDAL_RESET) / (BRAKE_PEDAL_FULL - BRAKE_PEDAL_RESET);
 
+  /* clamp */
+  brake_normalized = brake_normalized > 1 ? 1 : brake_normalized;
+  brake_normalized = brake_normalized < 0.05 ? 0 : brake_normalized;
+
+  return brake_normalized;
+}
+
+// TODO The rules states that the pedals can't deviate by 10%
+// TODO The ADC Channel has changed due to the new microbasic
+float FEB_APPS_getAccPedal() {
+  ACCPEDAL.sensor1 = FEB_ADC_sampleChannel(&hadc1, ADC_CHANNEL_10);
+  ACCPEDAL.sensor2= FEB_ADC_sampleChannel(&hadc1, ADC_CHANNEL_11);
+//  char str[128];
+//  sprintf(str, "%f\t%f\t", acc_pedal_0, acc_pedal_1);
+//  FEB_log("", "", str);
+
+
+  float acc_0_normalized = (acc_pedal_0 - ACC_PEDAL_0_RESET) / (ACC_PEDAL_0_FULL - ACC_PEDAL_0_RESET);
+  float acc_1_normalized = (acc_pedal_1 - ACC_PEDAL_1_RESET) / (ACC_PEDAL_1_FULL - ACC_PEDAL_1_RESET);
+
+  float acc_normalized = 0.5 * (acc_0_normalized + acc_1_normalized);
+
+  /* clamp */
+  acc_normalized = acc_normalized > 1 ? 1 : acc_normalized;
+  acc_normalized = acc_normalized < 0.05 ? 0 : acc_normalized;
+
+  return acc_normalized;
+}
 /* USER CODE END 4 */
 
 /**
